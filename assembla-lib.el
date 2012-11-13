@@ -43,8 +43,10 @@
 
 (defun assembla-credentials-set()
   "Checks to see if custom variables required for API calls are set."
-  (and (boundp 'assembla-api-key)
-       (boundp 'assembla-api-key-secret)))
+  (and (and (boundp 'assembla-api-key)
+	    (not (eq assembla-api-key nil)))
+       (and (boundp 'assembla-api-key-secret)
+	    (not (eq assembla-api-key-secret nil)))))
 
 (defun assembla-get(uri type callback)
   "Retrieves Assembla URI asynchronously and calls `callback' when finished.
