@@ -36,8 +36,14 @@
   :group 'assembla-lib
   :type  'string)
 
+(defcustom assembla-cache-dir "~/.emacs.d/tmp/assembla/cache"
+  "Path to store cached Assembla API responses."
+  :group 'assembla-lib
+  :type  'string)
+
 (defvar assembla-buffer-name "-- assembla --")
 
+;; utils
 (defun assembla-format-api-url(uri type)
   (format "%s/%s.%s" assembla-api-url uri type))
 
@@ -48,6 +54,20 @@
        (and (boundp 'assembla-api-key-secret)
 	    (not (eq assembla-api-key-secret nil)))))
 
+;; cache utils
+(defun assembla-invalidate-caches())
+
+(defun assembla-cache-response(url response)
+  "Caches `response' in a file named after an MD5 hash of `url' and a unix timestamp. Stores file in `assembla-cache-dir' which is created if it doesn't exist."
+  (let* ((url-hash       (md5 url))
+	 (unix-timestamp (format-time-string "%s"))
+	 (cache-file     (format "%s/%s.%s.cache" assembla-cache-dir url-hash unix-timestamp)))
+    (if (not (file-exists-p assembla-cache-dir))
+	(make-directory assembla-cache-dir t))
+    (with-temp-file cache-file
+      (insert (format "%s" response)))))
+
+;; request utils
 (defun assembla-get(uri type callback)
   "Retrieves Assembla URI asynchronously and calls `callback' when finished.
    `uri' and `type' get passed to `assembla-format-api-url' to form the retrieve
