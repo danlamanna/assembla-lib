@@ -17,6 +17,12 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Commentary:
+;; A very much so work in progress.
+
+;;; Code:
+
 (require 'furl)
 
 (defconst assembla-api-url "https://api.assembla.com/v1")
@@ -27,12 +33,12 @@
   :group 'tools)
 
 (defcustom assembla-api-key nil
-  "Assembla API Key"
+  "Assembla API Key."
   :group 'assembla-lib
   :type  'string)
 
 (defcustom assembla-api-key-secret nil
-  "Assembla API Key Secret"
+  "Assembla API Key Secret."
   :group 'assembla-lib
   :type  'string)
 
@@ -87,7 +93,7 @@
 
 (defun assembla-has-cache(url)
   "Calls `assembla-invalidate-caches', then checks if any files exist
-   in `assembla-cache-dir' starting with the MD5 hash of `url'.
+   in `assembla-cache-dir' starting with the MD5 hash of URL.
    Returns t or nil."
   (assembla-invalidate-caches)
   (if (eq (directory-files assembla-cache-dir nil (format "^%s" (md5 url))) nil)
@@ -95,9 +101,9 @@
     t))
 
 (defun assembla-get-cache(url &optional safe)
-  "Returns the contents of a cache file it assumes exists, unless `safe' is set to
+  "Returns the contents of a cache file it assumes exists, unless SAFE is set to
    a non-nil value, in which case it will call `assembla-has-cache' invalidating
-   old caches, and then recurse with `safe' set to nil."
+   old caches, and then recurse with SAFE set to nil."
   (if (not (eq safe nil))
       (if (assembla-has-cache url) ; if it has a cache file, jump to non safe
 	  (assembla-get-cache url nil))
@@ -108,10 +114,11 @@
 	(buffer-string)))))
 
 (defun assembla-cache-response(url response &optional duration)
-  "Caches `response' in a file named after an MD5 hash of `url', a unix timestamp, and the duration to store it.
-   Stores file in `assembla-cache-dir' which is created if it doesn't exist.
+  "Caches RESPONSE in a file named after an MD5 hash of URL, a unix timestamp,
+   and the duration to store it. Stores file in `assembla-cache-dir' which is
+   created if it doesn't exist.
 
-   Nothing will be cached if `assembla-cache-enabled' is `nil', or `duration' is < 1."
+   Nothing will be cached if `assembla-cache-enabled' is `nil', or DURATION is < 1."
   (unless (or (not assembla-cache-enabled)
 	      (<   duration 1))
     (let* ((url-hash       (md5 url))
@@ -125,16 +132,19 @@
 
 ;; request utils
 (defun assembla-get(uri type callback &optional use-cache &optional cache-duration)
-  "Retrieves Assembla URI asynchronously and calls `callback' when finished.
-   `uri' and `type' get passed to `assembla-format-api-url' to form the retrieve
+  "Retrieves Assembla URI asynchronously and calls CALLBACK when finished.
+   URI and TYPE get passed to `assembla-format-api-url' to form the retrieve
    URL.
 
-   If `use-cache' is t, `assembla-cache-enabled' is t, and `assembla-has-cache' returns
-   a response, no HTTP request will be sent, and `callback' will be applied to the cached response.
+   If USE-CACHE is t, `assembla-cache-enabled' is t, and `assembla-has-cache'
+   returns a response, no HTTP request will be sent, and CALLBACK will be
+   applied to the cached response.
 
-   `use-cache' and `cache-duration' are never both utilized, if it returns a cached response via `use-cache',
-   it won't cache anything new. On the other hand if it can't or doesn't `use-cache', and `assembla-cache-enabled' is t,
-   and `cache-duration' or `assembla-cache-duration-default' are > 1, it will cache the response."
+   USE-CACHE and CACHE-DURATION are never both utilized, if it returns a
+   cached response via USE-CACHE it won't cache anything new. On the other
+   hand if it can't or doesn't utilize USE-CACHE, and `assembla-cache-enabled'
+   is t, and CACHE-DURATION or `assembla-cache-duration-default' are > 1, it
+   will cache the response."
   (lexical-let* ((url            (assembla-format-api-url uri type))
 		 (callback       callback)
 		 (cached         (and assembla-cache-enabled use-cache (assembla-has-cache url)))
@@ -152,8 +162,8 @@
 				 (funcall callback response)))))))))
 
 (defun assembla-post-or-put(uri type data-str request-method callback)
-  "POST/PUT (determined by `request-method') the data in `data-str' to Assembla URI asynchronously and calls `callback' when finished.
-   `data-str' must be formatted in `type'"
+  "POST/PUT (determined by REQUEST-METHOD) the data in DATA-STR to Assembla URI
+   asynchronously and calls CALLBACK when finished. DATA-STR must be formatted in TYPE."
   (let ((url (assembla-format-api-url uri type))
 	(url-request-data data-str)
 	(url-request-method request-method)
@@ -173,3 +183,5 @@
     (url-retrieve url callback)))
 
 (provide 'assembla-lib)
+
+;;; assembla-lib.el ends here
