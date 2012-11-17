@@ -85,7 +85,27 @@
 	  (when (< (+ timestamp duration) current)
 	    (delete-file (format "%s/%s" assembla-cache-dir cache-file))))))))
 
+(defun assembla-has-cache(url)
+  "Calls `assembla-invalidate-caches', then checks if any files exist
+   in `assembla-cache-dir' starting with the MD5 hash of `url'.
+   Returns t or nil."
+  (assembla-invalidate-caches)
+  (if (eq (directory-files assembla-cache-dir nil (format "^%s" (md5 url))) nil)
+      nil
+    t))
 
+(defun assembla-get-cache(url &optional safe)
+  "Returns the contents of a cache file it assumes exists, unless `safe' is set to
+   a non-nil value, in which case it will call `assembla-has-cache' invalidating
+   old caches, and then recurse with `safe' set to nil."
+  (if (not (eq safe nil))
+      (if (assembla-has-cache url) ; if it has a cache file, jump to non safe
+	  (assembla-get-cache url nil))
+    ; non safe, just get the cache file
+    (let ((cache-file (car (last (directory-files assembla-cache-dir nil (format "^%s" (md5 url)))))))
+      (with-temp-buffer
+	(insert-file-contents cache-file)
+	(buffer-string)))))
 
 (defun assembla-cache-response(url response &optional duration)
   "Caches `response' in a file named after an MD5 hash of `url', a unix timestamp, and the duration to store it.
@@ -102,8 +122,6 @@
 	  (make-directory assembla-cache-dir t))
       (with-temp-file cache-file
 	(insert (format "%s" response))))))
-
-(defun assembla-has-cache(url)  )
 
 ;; request utils
 (defun assembla-get(uri type callback &optional use-cache &optional cache-duration)
