@@ -106,7 +106,7 @@
       (if (assembla-has-cache url) ; if it has a cache file, jump to non safe
 	  (assembla-get-cache url nil))
     ; non safe, just get the cache file
-    (let ((cache-file (car (last (directory-files assembla-cache-dir nil (format "^%s" (md5 url)))))))
+    (let ((cache-file (car (last (directory-files assembla-cache-dir t (format "^%s" (md5 url)))))))
       (with-temp-buffer
 	(insert-file-contents cache-file)
 	(buffer-string)))))
