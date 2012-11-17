@@ -51,6 +51,11 @@
   :group 'assembla-lib
   :type  'integer)
 
+(defcustom assembla-developer-mode nil
+  "Set to t, this will never invalidate cache, offline development ftw."
+  :group 'assembla-lib
+  :type  'boolean)
+
 ;; utils
 (defun assembla-format-api-url(uri type)
   (format "%s/%s.%s" assembla-api-url uri type))
@@ -63,7 +68,24 @@
 	    (not (eq assembla-api-key-secret nil)))))
 
 ;; cache utils
-(defun assembla-invalidate-caches())
+(defun assembla-invalidate-caches()
+  "Gets all cache files stored in `assembla-cache-dir', cycles through, and if a cache
+   file is expired (its storage timestamp + duration to cache is less than the present time)
+   it gets deleted.
+
+   Note `assembla-developer-mode' will cause the body of this function to never run."
+  (unless assembla-developer-mode
+    ;; regex for cache files should be much more thorough, to ensure other areas don't fail "[a-z0-9]{32}\.[0-9]{10,12}\.[0-9]+\.cache" ?
+    (let ((cache-files (directory-files assembla-cache-dir nil "cache$")))
+      (dolist (cache-file cache-files)
+	(let* ((file-meta (split-string cache-file "\\."))
+	       (timestamp (string-to-number (car (cdr file-meta))))
+	       (duration  (string-to-number (car (cdr (cdr file-meta)))))
+	       (current   (string-to-number (format-time-string "%s"))))
+	  (when (< (+ timestamp duration) current)
+	    (delete-file (format "%s/%s" assembla-cache-dir cache-file))))))))
+
+
 
 (defun assembla-cache-response(url response &optional duration)
   "Caches `response' in a file named after an MD5 hash of `url', a unix timestamp, and the duration to store it.
@@ -93,15 +115,15 @@
    a response, no HTTP request will be sent, and `callback' will be applied to the cached response.
 
    `use-cache' and `cache-duration' are never both utilized, if it returns a cached response via `use-cache',
-    it won't cache. On the other hand if it can't or doesn't `use-cache', and `assembla-cache-enabled' is t,
-    and `cache-duration' or `assembla-cache-duration-default' are > 1, it will cache the response."
+   it won't cache anything new. On the other hand if it can't or doesn't `use-cache', and `assembla-cache-enabled' is t,
+   and `cache-duration' or `assembla-cache-duration-default' are > 1, it will cache the response."
   (lexical-let* ((url            (assembla-format-api-url uri type))
 		 (callback       callback)
 		 (cached         (and assembla-cache-enabled use-cache (assembla-has-cache url)))
 		 (do-cache       (and assembla-cache-enabled (or cache-duration assembla-cache-duration-default)))
 		 (cache-duration (or cache-duration assembla-cache-duration-default)))
     (if cached
-	(funcall callback (assembla-get-cache (assembla-format-api-url uri type)))
+	(funcall callback (assembla-get-cache url))
       (if (not (assembla-credentials-set))
 	  (message "Use M-x customize to set assembla-lib settings.")
 	(furl-with-header "X-Api-Key" assembla-api-key
