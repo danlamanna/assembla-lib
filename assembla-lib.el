@@ -36,7 +36,7 @@
   :group 'assembla-lib
   :type  'string)
 
-(defcustom assembla-cache-enabled t
+(defcustom assembla-cache-enabled nil
   "Setting to nil will disable caching of all responses."
   :group 'assembla-lib
   :type  'boolean)
