@@ -71,7 +71,6 @@
 
    Nothing will be cached if `assembla-cache-enabled' is `nil', or `duration' is < 1."
   (unless (or (not assembla-cache-enabled)
-	      (not duration)
 	      (<   duration 1))
     (let* ((url-hash       (md5 url))
 	   (unix-timestamp (format-time-string "%s"))
