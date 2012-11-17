@@ -94,11 +94,9 @@
 (defun assembla-has-cache(url)
   "Calls `assembla-invalidate-caches', then checks if any files exist
    in `assembla-cache-dir' starting with the MD5 hash of URL.
-   Returns t or nil."
+   Returns list of matching cache files, or nil."
   (assembla-invalidate-caches)
-  (if (eq (directory-files assembla-cache-dir nil (format "^%s" (md5 url))) nil)
-      nil
-    t))
+  (directory-files assembla-cache-dir nil (format "^%s" (md5 url))))
 
 (defun assembla-get-cache(url &optional safe)
   "Returns the contents of a cache file it assumes exists, unless SAFE is set to
