@@ -126,6 +126,7 @@
       (if (not (file-directory-p assembla-cache-dir))
 	  (make-directory assembla-cache-dir t))
       (with-temp-file cache-file
+	(setq buffer-file-coding-system 'raw-text)
 	(insert (format "%s" response))))))
 
 ;; request utils
