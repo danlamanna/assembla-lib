@@ -91,6 +91,20 @@
 	  (when (< (+ timestamp duration) current)
 	    (delete-file (format "%s/%s" assembla-cache-dir cache-file))))))))
 
+(defun assembla-invalidate-uri-cache(uri type)
+  "Forcibly invalidates cache related to a specific URI and TYPE
+   ignoring when the cache is supposed to expire.
+
+   Note: `assembla-developer-mode' will cause the body of this function
+   to never run, similar to `assembla-invalidate-caches'."
+  (unless assembla-developer-mode
+    (let* ((url      (assembla-format-api-url uri type))
+	   (url-hash (md5 url))
+	   (uri-cache-files (directory-files assembla-cache-dir nil (format "^%s" url-hash))))
+      (message url-hash)
+      (dolist (cache-file uri-cache-files)
+	(delete-file (format "%s/%s" assembla-cache-dir cache-file))))))
+
 (defun assembla-has-cache(url)
   "Calls `assembla-invalidate-caches', then checks if any files exist
    in `assembla-cache-dir' starting with the MD5 hash of URL.
