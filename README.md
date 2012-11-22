@@ -7,7 +7,7 @@ This library is based off Assemblas new API (v1) referenced [here][1]. Right now
 
 Installation
 ----
-1) Add [furl.el][2] to your load path.
+1) Add [furl.el][2] to your load path.    
 2) Add assembla-lib.el to your load path.
 
      (require 'assembla-lib)
