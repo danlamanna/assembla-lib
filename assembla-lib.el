@@ -22,8 +22,6 @@
 
 ;;; Code:
 
-(require 'furl)
-
 (defconst asl/api-url "https://api.assembla.com/v1")
 
 (defgroup assembla-lib nil
@@ -65,12 +63,13 @@
 (defun asl/format-api-url(uri type)
   (format "%s/%s.%s" asl/api-url uri type))
 
-(defun asl/credentials-set()
+(defun asl/check-credentials()
   "Checks to see if custom variables required for API calls are set."
-  (and (and (boundp 'asl/api-key)
-	    (not (eq asl/api-key nil)))
-       (and (boundp 'asl/api-key-secret)
-	    (not (eq asl/api-key-secret nil)))))
+  (unless (and (and (boundp 'asl/api-key)
+                    (not (eq asl/api-key nil)))
+               (and (boundp 'asl/api-key-secret)
+                    (not (eq asl/api-key-secret nil))))
+    (error "Assembla-lib credentials not set")))
 
 ;; cache utils
 (defun asl/invalidate-caches()
@@ -83,12 +82,12 @@
     ;; regex for cache files should be much more thorough, to ensure other areas don't fail "[a-z0-9]{32}\.[0-9]{10,12}\.[0-9]+\.cache" ?
     (let ((cache-files (directory-files asl/cache-dir nil "cache$")))
       (dolist (cache-file cache-files)
-	(let* ((file-meta (split-string cache-file "\\."))
-	       (timestamp (string-to-number (car (cdr file-meta))))
-	       (duration  (string-to-number (car (cdr (cdr file-meta)))))
-	       (current   (string-to-number (format-time-string "%s"))))
-	  (when (< (+ timestamp duration) current)
-	    (delete-file (format "%s/%s" asl/cache-dir cache-file))))))))
+        (let* ((file-meta (split-string cache-file "\\."))
+               (timestamp (string-to-number (car (cdr file-meta))))
+               (duration  (string-to-number (car (cdr (cdr file-meta)))))
+               (current   (string-to-number (format-time-string "%s"))))
+          (when (< (+ timestamp duration) current)
+            (delete-file (format "%s/%s" asl/cache-dir cache-file))))))))
 
 (defun asl/invalidate-uri-cache(uri type)
   "Forcibly invalidates cache related to a specific URI and TYPE
@@ -98,11 +97,11 @@
    to never run, similar to `asl/invalidate-caches'."
   (unless asl/developer-mode
     (let* ((url      (asl/format-api-url uri type))
-	   (url-hash (md5 url))
-	   (uri-cache-files (directory-files asl/cache-dir nil (format "^%s" url-hash))))
+           (url-hash (md5 url))
+           (uri-cache-files (directory-files asl/cache-dir nil (format "^%s" url-hash))))
       (message url-hash)
       (dolist (cache-file uri-cache-files)
-	(delete-file (format "%s/%s" asl/cache-dir cache-file))))))
+        (delete-file (format "%s/%s" asl/cache-dir cache-file))))))
 
 (defun asl/has-cache(url)
   "Calls `asl/invalidate-caches', then checks if any files exist
@@ -117,12 +116,12 @@
    old caches, and then recurse with SAFE set to nil."
   (if (not (eq safe nil))
       (if (asl/has-cache url) ; if it has a cache file, jump to non safe
-	  (asl/get-cache url nil))
-    ; non safe, just get the cache file
+          (asl/get-cache url nil))
+                                        ; non safe, just get the cache file
     (let ((cache-file (car (last (directory-files asl/cache-dir t (format "^%s" (md5 url)))))))
       (with-temp-buffer
-	(insert-file-contents cache-file)
-	(buffer-string)))))
+        (insert-file-contents cache-file)
+        (buffer-string)))))
 
 (defun asl/cache-response(url response &optional duration)
   "Caches RESPONSE in a file named after an MD5 hash of URL, a unix timestamp,
@@ -131,20 +130,20 @@
 
    Nothing will be cached if `asl/cache-enabled' is `nil', or DURATION is < 1."
   (unless (or (not asl/cache-enabled)
-	      (<   duration 1))
+              (<   duration 1))
     (let* ((url-hash       (md5 url))
-	   (unix-timestamp (format-time-string "%s"))
-	   (cache-duration (or duration asl/cache-duration-default))
-	   (cache-file     (format "%s/%s.%s.%d.cache" asl/cache-dir url-hash unix-timestamp cache-duration)))
+           (unix-timestamp (format-time-string "%s"))
+           (cache-duration (or duration asl/cache-duration-default))
+           (cache-file     (format "%s/%s.%s.%d.cache" asl/cache-dir url-hash unix-timestamp cache-duration)))
       (if (not (file-directory-p asl/cache-dir))
-	  (make-directory asl/cache-dir t))
+          (make-directory asl/cache-dir t))
       (with-temp-file cache-file
-	(setq buffer-file-coding-system 'raw-text)
-	(insert (format "%s" response))))))
+        (setq buffer-file-coding-system 'raw-text)
+        (insert (format "%s" response))))))
 
 ;; request utils
 (defun asl/get(uri type callback &optional use-cache &optional cache-duration)
-  "Retrieves Assembla URI asynchronously and calls CALLBACK when finished.
+  "Retrieves Assembla URI synchronously and calls CALLBACK when finished.
    URI and TYPE get passed to `asl/format-api-url' to form the retrieve
    URL.
 
@@ -157,41 +156,39 @@
    hand if it can't or doesn't utilize USE-CACHE, and `asl/cache-enabled'
    is t, and CACHE-DURATION or `asl/cache-duration-default' are > 1, it
    will cache the response."
+  (asl/check-credentials)
   (lexical-let* ((url            (asl/format-api-url uri type))
-		 (callback       callback)
-		 (cached         (and asl/cache-enabled use-cache (asl/has-cache url)))
-		 (do-cache       (and asl/cache-enabled (or cache-duration asl/cache-duration-default)))
-		 (cache-duration (or cache-duration asl/cache-duration-default)))
+                 (callback       callback)
+                 (cached         (and asl/cache-enabled use-cache (asl/has-cache url)))
+                 (do-cache       (and asl/cache-enabled (or cache-duration asl/cache-duration-default)))
+                 (cache-duration (or cache-duration asl/cache-duration-default)))
     (if cached
-	(funcall callback (asl/get-cache url))
-      (if (not (asl/credentials-set))
-	  (message "Use M-x customize to set assembla-lib settings.")
-	(furl-with-header "X-Api-Key" asl/api-key
-	  (furl-with-header "X-Api-Secret" asl/api-key-secret
-	    (furl-retrieve url (lambda(response)
-				 (if do-cache
-				     (asl/cache-response url response cache-duration))
-				 (funcall callback response)))))))))
+        (funcall callback (asl/get-cache url))
+      (with-current-buffer (url-retrieve-synchronously url)
+        (let ((response (buffer-substring-no-properties url-http-end-of-headers (point-max))))
+          (funcall callback response)
+          (if do-cache
+              (asl/cache-response url response cache-duration)))))))
 
 (defun asl/post-or-put(uri type data-str request-method callback)
   "POST/PUT (determined by REQUEST-METHOD) the data in DATA-STR to Assembla URI
    asynchronously and calls CALLBACK when finished. DATA-STR must be formatted in TYPE."
   (let ((url (asl/format-api-url uri type))
-	(url-request-data data-str)
-	(url-request-method request-method)
-	(url-request-extra-headers
-	 `(("Content-Type" . ,(format "application/%s" type))
-	   ("X-Api-Key"    . ,asl/api-key)
-	   ("X-Api-Secret" . ,asl/api-key-secret))))
+        (url-request-data data-str)
+        (url-request-method request-method)
+        (url-request-extra-headers
+         `(("Content-Type" . ,(format "application/%s" type))
+           ("X-Api-Key"    . ,asl/api-key)
+           ("X-Api-Secret" . ,asl/api-key-secret))))
     (url-retrieve url callback)))
 
 (defun asl/delete(uri type callback)
   "Sends asynchronous DELETE request to Assembla URI."
   (let ((url (asl/format-api-url uri type))
-	(url-request-method "DELETE")
-	(url-request-extra-headers
-	 `(("X-Api-Key"    . ,asl/api-key)
-	   ("X-Api-Secret" . ,asl/api-key-secret))))
+        (url-request-method "DELETE")
+        (url-request-extra-headers
+         `(("X-Api-Key"    . ,asl/api-key)
+           ("X-Api-Secret" . ,asl/api-key-secret))))
     (url-retrieve url callback)))
 
 (provide 'assembla-lib)

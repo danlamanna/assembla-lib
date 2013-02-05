@@ -7,8 +7,7 @@ This library is based off Assemblas new API (v1) referenced [here][1]. Right now
 
 Installation
 ----
-1) Add [furl.el][2] to your load path.    
-2) Add assembla-lib.el to your load path.
+1) Add assembla-lib.el to your load path.
 
      (require 'assembla-lib)
 
@@ -17,7 +16,6 @@ Use `M-x customize` to set API Key and API Key Secret
 Bugs/Enhancements
 ----
 - Adding oauth2 support?
-- Removing dependency for furl.el
 - Better (or any) error handling for 404 and 522 status code responses
 - Better responses to PUT/POST/DELETE requests.
 
@@ -48,4 +46,3 @@ Using the other custom variables, you can alter where the cache files are stored
     (asl/get "spaces" "json" 'some-other-callback t 3600)
 
 [1]: http://api-doc.assembla.com/
-[2]: http://code.google.com/p/furl-el/source/browse/furl.el
