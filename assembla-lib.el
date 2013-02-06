@@ -59,6 +59,17 @@
   :group 'assembla-lib
   :type  'boolean)
 
+(defcustom asl/all-space-ids nil
+  "A function to return a list of all space ids, for helpers."
+  :group 'assembla-lib
+  :type 'function)
+
+(defcustom asl/all-ticket-ids nil
+  "A function to return a list of all ticket ids, car being the ticket
+   id, and cdr being the space-id."
+  :group 'assembla-lib
+  :type 'function)
+
 ;; utils
 (defun asl/format-api-url(uri type)
   (format "%s/%s.%s" asl/api-url uri type))
@@ -190,6 +201,23 @@
          `(("X-Api-Key"    . ,asl/api-key)
            ("X-Api-Secret" . ,asl/api-key-secret))))
     (url-retrieve url callback)))
+
+;; helpers
+(defmacro for-all-spaces(&rest body)
+  (when fboundp 'asl/all-space-ids
+        (declare (indent 2)
+                 (debug t))
+        `(dolist (space-id (asl/all-space-ids))
+           (progn ,@body))))
+
+(defmacro for-all-tickets(&rest body)
+  (when fboundp 'asl/all-ticket-ids
+        (declare (indent 2)
+                 (debug t))
+        `(dolist (ticket (asl/all-ticket-ids))
+           (let ((ticket-id (car ticket))
+                 (space-id  (cdr ticket)))
+             (progn ,@body)))))
 
 (provide 'assembla-lib)
 
