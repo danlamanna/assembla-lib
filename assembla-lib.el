@@ -157,14 +157,20 @@
    is t, and CACHE-DURATION or `asl/cache-duration-default' are > 1, it
    will cache the response."
   (asl/check-credentials)
-  (lexical-let* ((url            (asl/format-api-url uri type))
-                 (callback       callback)
-                 (cached         (and asl/cache-enabled use-cache (asl/has-cache url)))
-                 (do-cache       (and asl/cache-enabled (or cache-duration asl/cache-duration-default)))
-                 (cache-duration (or cache-duration asl/cache-duration-default)))
+  (let* ((url            (asl/format-api-url uri type))
+         (callback       callback)
+         (cached         (and asl/cache-enabled use-cache (asl/has-cache url)))
+         (do-cache       (and asl/cache-enabled (or cache-duration asl/cache-duration-default)))
+         (cache-duration (or cache-duration asl/cache-duration-default))
+         (url-request-method "GET")
+         (url-request-extra-headers
+          `(("Content-Type" . ,(format "application/%s" type))
+            ("X-Api-Key"    . ,asl/api-key)
+            ("X-Api-Secret" . ,asl/api-key-secret)))
+         (response-buffer (unless cached (url-retrieve-synchronously url))))
     (if cached
         (funcall callback (asl/get-cache url))
-      (with-current-buffer (url-retrieve-synchronously url)
+      (with-current-buffer response-buffer
         (let ((response (buffer-substring-no-properties url-http-end-of-headers (point-max))))
           (funcall callback response)
           (if do-cache
